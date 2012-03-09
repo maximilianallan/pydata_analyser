@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import cv,os,sys,string,converter
+import cv,os,sys,string
+from converter import converter
 
 class image_getter:
 
@@ -18,9 +19,11 @@ class image_getter:
         if len(self.im_stack) == 0:
 
             print "Error, no images found"
+            sys.exit(-1)
 
-        else:
-            print "Done!"
+        convert = converter(self.im_stack,self.mask_stack)
+        convert.parse_images()
+        
 
 
 
@@ -64,8 +67,8 @@ class image_getter:
 
         for image in os.listdir(root_dir + "/" + train_name):
             try:
-                self.im_stack.append(cv.LoadImageM(root_dir+"/"+train_name+"/"+image))
-                self.mask_stack.append(cv.LoadImageM(root_dir+"/"+mask_name+"/"+image))
+                self.im_stack.append(cv.LoadImage(root_dir+"/"+train_name+"/"+image))
+                self.mask_stack.append(cv.LoadImage(root_dir+"/"+mask_name+"/"+image))
             except IOError:
                 print "Error, " + image + " not found"
 
