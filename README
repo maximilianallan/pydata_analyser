@@ -1,0 +1,8 @@
+Python implementation of data_analyser
+
+REQUIRES:
+
+	opencv python wrappers
+	numpy
+	scipy
+	matplotlib	
