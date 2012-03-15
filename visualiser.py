@@ -6,8 +6,8 @@ import sys
 
 class visualiser:
 
- #   def __init__(self):
-  #      print >> sys.stderr , "CREATED"
+    def __init__(self):
+        self.count = 0
     
     def set_axis(self,xlo,xhi,ylo,yhi):
         self.xlo = xlo
@@ -15,18 +15,18 @@ class visualiser:
         self.ylo = ylo
         self.yhi = yhi
         
-    def set_bins(self, bin_list):
-        self.bins = np.array(bin_list) #hist requires a numpy.ndarray
-        #print self.bins
+    def set_data(self, data_list):
+        self.data = np.array(data_list) #hist requires a numpy.ndarray
 
     def set_title(self,title):
         self.title = title
 
     def draw(self):
-
+        
         #data = pylab.randn(500)
+        pylab.figure()
         pylab.subplot(111)
-        (n,bins,patches) = pylab.hist(self.bins,len(self.bins))
+        (n,bins,patches) = pylab.hist(self.data,255)
         pylab.title(self.title)
         
         xlo = 0
@@ -35,7 +35,11 @@ class visualiser:
         yhi = max(abs(n)) * 1.1
         
         pylab.axis([xlo,xhi,ylo,yhi])
-        pylab.show()
+        #pylab.show()
+        self.count = self.count + 1
+        pylab.savefig("./image_{0}.svg".format(self.count),format="svg")
+        print "saved image {0}...".format(self.count)
+        pylab.close()
         
 
     def hist_outline( data_in, *args, **kwargs):

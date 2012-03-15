@@ -41,9 +41,9 @@ class image_getter:
         
         for dirent in os.listdir(dataset):
             
-            if dirent.find("training"):
+            if dirent.find("training") >= 0:
                 train_name = dirent
-            if dirent.find("mask"):
+            if dirent.find("mask") >= 0:
                 mask_name = dirent
                 
         try:
@@ -66,14 +66,20 @@ class image_getter:
     def push_ims(self, root_dir, train_name, mask_name):
 
         for image in os.listdir(root_dir + "/" + train_name):
+
             try:
                 self.im_stack.append(cv.LoadImage(root_dir+"/"+train_name+"/"+image))
-                self.mask_stack.append(cv.LoadImage(root_dir+"/"+mask_name+"/"+image))
             except IOError:
                 print "Error, " + image + " not found"
+                continue
 
-        print "done"
+            try:
+                self.mask_stack.append(cv.LoadImage(root_dir+"/"+mask_name+"/"+image))
+            except IOError:
+                print "Error, mask " + image + " not found"
+                self.im_stack.pop()
 
+        assert( len(self.im_stack) ==  len(self.mask_stack) ) 
             
         
         
@@ -83,6 +89,8 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "bad cmd line args"
         sys.exit(-1)
-
+        
+    print "running"
     getter = image_getter(sys.argv[1])
     getter.run()
+    print "done!"
