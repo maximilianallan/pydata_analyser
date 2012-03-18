@@ -21,25 +21,38 @@ class visualiser:
     def set_title(self,title):
         self.title = title
 
+    def set_bins(self,no_bins):
+        self.no_bins = no_bins
+
+    def set_range(self,vals_range):
+        self.xlo = vals_range[0]
+        self.xhi = vals_range[1]
+
     def draw(self):
         
         #data = pylab.randn(500)
-        pylab.figure()
-        pylab.subplot(111)
-        (n,bins,patches) = pylab.hist(self.data,255)
-        pylab.title(self.title)
-        
-        xlo = 0
+        fig = pylab.figure()
+        ax = fig.add_subplot(111)
+
+        (n,bins,patches) = ax.hist(self.data,self.no_bins)
+        ax.set_title(self.title)
+
+        #xlo = self.xlo
+        #xhi = self.xhi #max(abs(bins))
+        xlo = min(abs(bins))
         xhi = max(abs(bins))
         ylo = 0
         yhi = max(abs(n)) * 1.1
         
-        pylab.axis([xlo,xhi,ylo,yhi])
+        #ax.setaxis([xlo,xhi,ylo,yhi])
+        ax.set_xlim(xlo,xhi)
+        ax.set_ylim(ylo,yhi)
         #pylab.show()
         self.count = self.count + 1
-        pylab.savefig("./image_{0}.svg".format(self.count),format="svg")
+        fig.savefig("./image_{0}.svg".format(self.count),format="svg")
         print "saved image {0}...".format(self.count)
-        pylab.close()
+        #pylab.show()
+        #fig.close()
         
 
     def hist_outline( data_in, *args, **kwargs):

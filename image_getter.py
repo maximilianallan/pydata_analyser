@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import cv,os,sys,string
-from converter import converter
+from converter import converter_factory
 
 class image_getter:
 
@@ -21,8 +21,8 @@ class image_getter:
             print "Error, no images found"
             sys.exit(-1)
 
-        convert = converter(self.im_stack,self.mask_stack)
-        convert.parse_images()
+        convert_factory = converter_factory(self.im_stack,self.mask_stack)
+        convert_factory.parse_images()
         
 
 
@@ -64,7 +64,7 @@ class image_getter:
 
 
     def push_ims(self, root_dir, train_name, mask_name):
-
+        
         for image in os.listdir(root_dir + "/" + train_name):
 
             try:
@@ -80,7 +80,7 @@ class image_getter:
                 self.im_stack.pop()
 
         assert( len(self.im_stack) ==  len(self.mask_stack) ) 
-            
+        
         
         
 if __name__ == '__main__':

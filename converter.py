@@ -3,7 +3,22 @@
 import cv,cv2
 from visualiser import visualiser
 
+class channel:
+    def __init__(self, lo,hi,no_bins,name):
+        self.range = (lo,hi)
+        self.no_bins = no_bins
+        self.name = name
+
+
 class converter:
+
+    def __init__(self, lo, hi, no_bins, channel_names,function):
+        self.channels = []
+        for i in range(len(lo)):
+            self.channels.append( channel(lo[i],hi[i],no_bins[i],channel_names[i]) )
+        self.convert = function
+
+class converter_factory:
 
 
     def __init__(self, im_stack, mask_stack):
@@ -18,14 +33,42 @@ class converter:
         self.im_stack = im_stack
         self.mask_stack = mask_stack
         self.converters = []
-        self.converters.append(converter.rgb2rgb)
-        self.converters.append(converter.rgb2hsv)
-        self.converters.append(converter.rgb2cie)
+        self.converters.append(converter([0 for i in range(3)],
+                                         [255 for i in range(3)],
+                                         [256 for i in range(3)],
+                                         ["blue","green","red"],
+                                         converter_factory.bgr2bgr))
+        self.converters.append(converter([0 for i in range(3)],
+                                         [360,255,255],
+                                         [360,256,256],
+                                         ["hue","saturation","value"],
+                                         converter_factory.bgr2hsv))
+        self.converters.append(converter([0 for i in range(3)],
+                                         [255 for i in range(3)],
+                                         [256 for i in range(3)],
+                                         ["X","Y","Z"],
+                                         converter_factory.bgr2cie))
         #self.converters.append(converter.rgb2sift)
-        self.converters.append(converter.opponent1)
-        self.converters.append(converter.opponent2)
-        self.converters.append(converter.norm_red)
-        self.converters.append(converter.norm_green)
+        self.converters.append(converter([-128],
+                                         [128],
+                                         [256],
+                                         ["opponent 1"],
+                                         converter_factory.opponent1))
+        self.converters.append(converter([-125],
+                                         [128],
+                                         [254],
+                                         ["opponent 2"],
+                                         converter_factory.opponent2))
+        self.converters.append(converter([0],
+                                         [1],
+                                         [255],
+                                         ["normalized red"],
+                                         converter_factory.norm_red))
+        self.converters.append(converter([0],
+                                         [1],
+                                         [255],
+                                         ["normalized green"],
+                                         converter_factory.norm_green))
 
     def parse_images(self):
 
@@ -36,23 +79,29 @@ class converter:
         """
 
         vis = visualiser()
+        class_names = ["tool","tissue"]
 
-        for funct in self.converters:
+        for conv in self.converters:
             print "starting image..."
             #set up the pixel lists
-           
-            for image in range(int(float(len(self.im_stack))/3)):
-                 self.parse_pair(self.im_stack[image],
-                                 self.mask_stack[image],
-                                 funct,image)
-            
+            for s_image in range(int(float(len(self.im_stack))/3)):
+                
+                self.parse_pair(self.im_stack[s_image],
+                                self.mask_stack[s_image],
+                                conv.convert,s_image)
+
+                            
             print "got images..."
 
             for n in range(len(self.class_pix)):
                 
-                for chan in range(len(self.class_pix[n])):
+                for chan in range(len(conv.channels)):
                     vis.set_data(self.class_pix[n][chan])
-                    vis.set_title("class {0} - channel {1}".format(n,chan))
+                    assert(len(self.class_pix[n][chan]) > 0)
+                    vis.set_title("class {0} - channel {1}".format(class_names[n],
+                                                                   conv.channels[chan].name))
+                    vis.set_bins(conv.channels[chan].no_bins)
+                    vis.set_range(conv.channels[chan].range)
                     print "drawing"
                     vis.draw()
 
@@ -103,8 +152,8 @@ class converter:
         if cmp(image.height,mask.height):
             return
 
-        for r in range(image.height):
-            for c in range(image.width):
+        for r in range(50,image.height-50):
+            for c in range(50,image.width-50):
                 pix = image[r,c]
                 for n in range(image.nChannels):
                     #push pixels according to mask
@@ -112,39 +161,36 @@ class converter:
                         pix_v = pix[n]
                     else:
                         pix_v = pix
-
                     if mask[r,c][n] == 255.0:
                         self.class_pix[0][n].append(pix_v)
                     else:
                         self.class_pix[1][n].append(pix_v)
 
 
-                            
-                     
 
     @staticmethod
-    def rgb2rgb(in_im):
+    def bgr2bgr(in_im):
         return in_im;
 
     @staticmethod
-    def rgb2hsv(in_im):
+    def bgr2hsv(in_im):
         out_im = cv.CreateImage(cv.GetSize(in_im),
                                 in_im.depth,
                                 in_im.nChannels)
-        cv.CvtColor(in_im,out_im,cv.CV_RGB2HSV)
+        cv.CvtColor(in_im,out_im,cv.CV_BGR2HSV)
         return out_im
 
 
     @staticmethod
-    def rgb2cie(in_im):
+    def bgr2cie(in_im):
         out_im = cv.CreateImage(cv.GetSize(in_im),
                                 in_im.depth,
                                 in_im.nChannels)
-        cv.CvtColor(in_im,out_im,cv.CV_RGB2XYZ)
+        cv.CvtColor(in_im,out_im,cv.CV_BGR2XYZ)
         return out_im
     
     @staticmethod
-    def rgb2sift(in_im):
+    def bgr2sift(in_im):
         keypoint = []
         gray = cv.CreateImage(cv.GetSize(in_im),
                               in_im.depth,
@@ -160,8 +206,8 @@ class converter:
                                 1)
         for r in range(in_im.height):
             for c in range(in_im.width):
-                (r,g,b) = in_im[r,c]
-                out_im[r,c] = 0.5*(r-g)
+                (blue,green,red) = in_im[r,c]
+                out_im[r,c] = 0.5*(red-green)
         return out_im
 
     @staticmethod
@@ -171,8 +217,8 @@ class converter:
                                 1)
         for r in range(in_im.height):
             for c in range(in_im.width):
-                (r,g,b) = in_im[r,c]
-                out_im[r,c] = 0.5*b - 0.25*(r+g)
+                (blue,green,red) = in_im[r,c]
+                out_im[r,c] = 0.5*blue - 0.25*(red+green)
         return out_im
                 
     @staticmethod
@@ -182,11 +228,11 @@ class converter:
                                 1)
         for r in range(in_im.height):
             for c in range(in_im.width):
-                (r,g,b) = in_im[r,c]
-                if r+g+b == 0:
+                (blue,green,red) = in_im[r,c]
+                if red+green+blue == 0:
                     out_im[r,c] = 0.0000000001
                 else:
-                    out_im[r,c] = float(r)/(r+g+b)
+                    out_im[r,c] = float(red)/(red+green+blue)
         return out_im
                     
     @staticmethod
@@ -196,11 +242,11 @@ class converter:
                                 1)
         for r in range(in_im.height):
             for c in range(in_im.width):
-                (r,g,b) = in_im[r,c]
-                if r+g+b == 0:
+                (blue,green,red) = in_im[r,c]
+                if red+green+blue == 0:
                     out_im[r,c] = 0.0000000000001
                 else:
-                    out_im[r,c] = float(g)/(r+g+b)
+                    out_im[r,c] = float(green)/(red+green+blue)
         return out_im
     
                 
