@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import cv,cv2
-from visualiser import visualiser
+from visualiser import multi_visualiser,visualiser,cv_visualiser
 
 class channel:
     def __init__(self, lo,hi,no_bins,name):
@@ -61,12 +61,12 @@ class converter_factory:
                                          converter_factory.opponent2))
         self.converters.append(converter([0],
                                          [1],
-                                         [255],
+                                         [256],
                                          ["normalized red"],
                                          converter_factory.norm_red))
         self.converters.append(converter([0],
                                          [1],
-                                         [255],
+                                         [256],
                                          ["normalized green"],
                                          converter_factory.norm_green))
 
@@ -78,34 +78,39 @@ class converter_factory:
         lists
         """
 
-        vis = visualiser()
+        vis = multi_visualiser(2,visualiser)
         class_names = ["tool","tissue"]
 
         for conv in self.converters:
             print "starting image..."
             #set up the pixel lists
-            for s_image in range(int(float(len(self.im_stack))/3)):
+            for s_image in range(len(self.im_stack)-20):
                 
                 self.parse_pair(self.im_stack[s_image],
                                 self.mask_stack[s_image],
                                 conv.convert,s_image)
-
-                            
             print "got images..."
 
-            for n in range(len(self.class_pix)):
-                
-                for chan in range(len(conv.channels)):
-                    vis.set_data(self.class_pix[n][chan])
-                    assert(len(self.class_pix[n][chan]) > 0)
-                    vis.set_title("class {0} - channel {1}".format(class_names[n],
-                                                                   conv.channels[chan].name))
-                    vis.set_bins(conv.channels[chan].no_bins)
-                    vis.set_range(conv.channels[chan].range)
-                    print "drawing"
-                    vis.draw()
+            for chan in range(len(conv.channels)):
+                vis.set_data( [self.class_pix[0][chan],
+                               self.class_pix[1][chan] ])
+                assert(len(self.class_pix[0][chan]) > 0 and 
+                       len(self.class_pix[1][chan]) > 0 )
+                vis.set_title( ["class {0} - channel {1}".format(class_names[0],
+                                                                 conv.channels[chan].name),
+                                "class {0} - channel {1}".format(class_names[1],
+                                                                 conv.channels[chan].name) ] )
+                               
+                vis.set_nobins( [ conv.channels[chan].no_bins,
+                                conv.channels[chan].no_bins ])
+                vis.set_ranges( [ conv.channels[chan].range,
+                                 conv.channels[chan].range ] )
+                print "drawing"
+                vis.draw(1,2)
+                #'vis.draw_cv()
 
-                print "done one class..."
+                print "done one channel..."
+
             #clear up list - is this necessary?        
             for n in range(len(self.class_pix)):
                 for m in range(len(self.class_pix[n])):
@@ -152,19 +157,16 @@ class converter_factory:
         if cmp(image.height,mask.height):
             return
 
-        for r in range(50,image.height-50):
-            for c in range(50,image.width-50):
-                pix = image[r,c]
-                for n in range(image.nChannels):
-                    #push pixels according to mask
-                    if isinstance(pix,tuple):
-                        pix_v = pix[n]
-                    else:
-                        pix_v = pix
-                    if mask[r,c][n] == 255.0:
-                        self.class_pix[0][n].append(pix_v)
-                    else:
-                        self.class_pix[1][n].append(pix_v)
+        for r in range(5,image.height-5):
+            for c in range(5,image.width-5):
+
+                if mask[r,c] is (255,255,255):
+                    for n in range(image.nChannels):
+                        self.class_pix[0][n].append(image[r,c][n])
+
+                else:
+                    for n in range(image.nChannels):
+                        self.class_pix[1][n].append(image[r,c][n])
 
 
 
